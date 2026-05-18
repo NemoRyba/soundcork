@@ -186,7 +186,7 @@ Returns:
             <!-- as appropriate for you -->
             <firmwareVersion>{version number}</firmwareVersion>
             <!-- as appropriate for you -->
-            <ipaddress>10.0.0.123</ipaddress>
+            <ipaddress>192.0.2.123</ipaddress>
             <name>{your user-set human-readable device name}</name>
             <presets>
                 <preset buttonNumber="1">

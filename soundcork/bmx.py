@@ -16,6 +16,10 @@ from soundcork.model import (
     Stream,
     Track,
 )
+from soundcork.user_settings import (
+    DEFAULT_TUNEIN_SEARCH_ENDPOINT,
+    build_tunein_search_uri,
+)
 from soundcork.utils import strip_element_text
 
 logger = logging.getLogger(__name__)
@@ -33,9 +37,7 @@ TUNEIN_NAVIGATE_ASHX = "http://opml.radiotime.com/?render=json"
 # guid is defined in the Source definition token for the tunein service. however,
 # in actual use including the token doesn't seem to make a different; maybe
 # this is used for tracking?
-TUNEIN_SEARCH = (
-    "https://api.radiotime.com/profiles?fulltextsearch=true&version=1.3&query="
-)
+TUNEIN_SEARCH = DEFAULT_TUNEIN_SEARCH_ENDPOINT
 
 
 def bmx_services_json(settings: Settings) -> str:
@@ -53,7 +55,7 @@ def tunein_is_opml_uri(tunein_uri: str) -> bool:
 
 
 def tunein_search_uri(query: str) -> str:
-    return f"{TUNEIN_SEARCH}{urllib.parse.quote_plus(query)}"
+    return build_tunein_search_uri(query)
 
 
 def tunein_render_json_uri(tunein_uri: str) -> str:
@@ -583,6 +585,50 @@ def tunein_search_v1(query: str, subsection: str | None = None) -> BmxNavRespons
         bmx_sections=sections,
         layout="classic",
     )
+
+
+def tunein_station_search_results(query: str, limit: int = 12) -> list[dict[str, str]]:
+    """Return playable TuneIn stations for simple UI preset editing."""
+    query = query.strip()
+    if not query:
+        return []
+
+    tunein_uri = tunein_search_uri(query)
+    contents = urllib.request.urlopen(tunein_uri, timeout=10).read()
+    content_json = json.loads(contents.decode("utf-8"))
+
+    results: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def add_station(item: dict) -> None:
+        if item.get("Type", "") != "Station":
+            return
+
+        station_id = item.get("GuideId", "")
+        name = item.get("Title", "")
+        if not station_id or not name or station_id in seen:
+            return
+
+        seen.add(station_id)
+        results.append(
+            {
+                "station_id": station_id,
+                "name": name,
+                "subtitle": item.get("Subtitle", ""),
+                "image_url": item.get("Image", ""),
+            }
+        )
+
+    for item in content_json.get("Items", []):
+        add_station(item)
+        for child in item.get("Children", []):
+            add_station(child)
+            if len(results) >= limit:
+                break
+        if len(results) >= limit:
+            break
+
+    return results[:limit]
 
 
 def tunein_search_section(

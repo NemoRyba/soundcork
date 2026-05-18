@@ -1,0 +1,799 @@
+        {% if selected_device_id %}
+            {% if volume_state %}
+            <section class="control-tile reorder-panel" data-panel-id="volume" data-panel-default-surface="dashboard" data-panel-name="{{ t('volume') }}" aria-label="{{ t('volume_controls') }}">
+                <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('volume')) }}"></button>
+                <div class="control-title">{{ t("volume") }}</div>
+                <div class="volume-row">
+                    <form action="/miniapp/mute" method="post" class="mute-form" data-mute-form>
+                        <input type="hidden" name="muted" value="{% if volume_state.muted %}false{% else %}true{% endif %}">
+                        <button type="submit" class="compact-button mute-button {% if volume_state.muted %}is-muted{% endif %}" aria-label="{% if volume_state.muted %}{{ t('unmute') }}{% else %}{{ t('mute') }}{% endif %}" data-mute-button>
+                            <span aria-hidden="true" class="mute-icon"></span>
+                            <span class="sr-only">{% if volume_state.muted %}{{ t('unmute') }}{% else %}{{ t('mute') }}{% endif %}</span>
+                        </button>
+                    </form>
+                    <form action="/miniapp/volume" method="post" class="volume-form" data-volume-form>
+                        <input
+                            type="range"
+                            name="volume_level"
+                            min="0"
+                            max="100"
+                            value="{{ volume_state.target }}"
+                            aria-label="{{ t('volume') }}"
+                            data-volume-range>
+                    </form>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if source_list %}
+            <section class="control-tile reorder-panel" data-panel-id="sources" data-panel-default-surface="dashboard" data-panel-name="{{ t('sources') }}" aria-label="{{ t('source_controls') }}">
+                <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('sources')) }}"></button>
+                <div class="control-title">{{ t("sources") }}</div>
+                <p class="panel-hint">{{ t("sources_untested_hint") }}</p>
+                <div class="source-grid">
+                    {% for source in source_list %}
+                    <form action="/miniapp/source" method="post">
+                        <input type="hidden" name="source" value="{{ source.source }}">
+                        <input type="hidden" name="source_account" value="{{ source.source_account }}">
+                        <button type="submit" class="source-button">{{ source.title }}</button>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% if bluetooth_available %}
+                <div class="button-row">
+                    <form action="/miniapp/bluetooth" method="post">
+                        <input type="hidden" name="action" value="pair">
+                        <button type="submit" class="compact-button">{{ t("pair_bt") }}</button>
+                    </form>
+                    <form action="/miniapp/bluetooth" method="post">
+                        <input type="hidden" name="action" value="clear">
+                        <button type="submit" class="compact-button">{{ t("clear_bt") }}</button>
+                    </form>
+                </div>
+                {% endif %}
+            </section>
+            {% endif %}
+        {% endif %}
+
+        <section class="dashboard-section reorder-panel" data-panel-id="presets" data-panel-default-surface="dashboard" data-panel-name="{{ t('presets') }}" aria-labelledby="presets-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('presets')) }}"></button>
+            <div class="section-heading">
+                <h2 id="presets-heading">{{ t("presets") }}</h2>
+                <div class="section-actions">
+                    {% if selected_device_id %}
+                    <button
+                        type="button"
+                        class="sync-menu-button"
+                        data-sync-dialog-open
+                        aria-haspopup="dialog"
+                        aria-expanded="false"
+                        aria-controls="preset-sync-dialog"
+                        aria-label="{{ t('preset_sync_options') }}">
+                        <img src="{{ sync_icon_path }}" alt="">
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if selected_device_id %}
+            <div
+                id="preset-sync-dialog"
+                class="preset-sync-popover"
+                data-sync-dialog
+                role="dialog"
+                aria-labelledby="preset-sync-title"
+                hidden>
+                <div class="sync-popover-heading">
+                    <h3 id="preset-sync-title">{{ t("preset_sync") }}</h3>
+                    <button type="button" class="icon-button sync-popover-close" data-sync-dialog-close aria-label="{{ t('close_sync_options') }}">
+                        <span class="sr-only">{{ t("close") }}</span>
+                    </button>
+                </div>
+                <div class="sync-choice-list">
+                    <form action="/miniapp/resync-presets" method="post">
+                        <button type="submit" class="sync-choice-button">
+                            <span class="sync-flow" aria-hidden="true">
+                                <span class="sync-device sync-radio">
+                                    <img src="/static/images/devices/soundtouch-10-20.png" alt="">
+                                </span>
+                                <span class="sync-arrow"></span>
+                                <span class="sync-device sync-phone"></span>
+                            </span>
+                            <span class="sync-choice-copy">
+                                <strong>{{ t("radio_to_phone") }}</strong>
+                                <small>{{ t("resync_from_radio") }}</small>
+                            </span>
+                        </button>
+                    </form>
+                    {% if preset_slots %}
+                    <form id="preset-reorder-form" action="/miniapp/reorder-presets" method="post">
+                        <input id="preset-order-input" type="hidden" name="preset_order" value="">
+                        <button type="submit" class="sync-choice-button" data-preset-order-submit>
+                            <span class="sync-flow" aria-hidden="true">
+                                <span class="sync-device sync-phone"></span>
+                                <span class="sync-arrow"></span>
+                                <span class="sync-device sync-radio">
+                                    <img src="/static/images/devices/soundtouch-10-20.png" alt="">
+                                </span>
+                            </span>
+                            <span class="sync-choice-copy">
+                                <strong data-preset-order-status>{{ t("phone_to_radio") }}</strong>
+                                <small>{{ t("save_this_order") }}</small>
+                            </span>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if preset_slots %}
+            <ol class="preset-board" data-preset-board>
+                {% for slot in preset_slots %}
+                <li
+                    class="preset-slot {% if not slot.preset %}empty{% endif %}"
+                    data-slot="{{ slot.number }}"
+                    data-preset-id="{{ slot.preset.id if slot.preset else '' }}">
+                    {% if slot.preset %}
+                    <form action="/miniapp/select-content-item" method="post" class="preset-form">
+                        <input type="hidden" name="content_item_id" value="{{ slot.preset.id }}">
+                        <input type="hidden" name="content_item_name" value="{{ slot.preset.name }}">
+                        <input type="hidden" name="content_item_art" value="{{ slot.preset.container_art or '' }}">
+                        <button type="submit" class="preset-card">
+                            {% if slot.preset.container_art %}
+                            <img src="{{ slot.preset.container_art }}" alt="" draggable="false" data-optional-art>
+                            {% endif %}
+                            <span class="preset-number">{{ slot.number }}</span>
+                            <span class="preset-name">{{ slot.preset.name }}</span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="preset-card empty-card">
+                        <span class="preset-number">{{ slot.number }}</span>
+                        <span class="preset-name">{{ t("empty") }}</span>
+                    </div>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <div class="empty-state">{{ t("no_presets_configured") }}</div>
+            {% endif %}
+
+            <div class="panel-subsection" aria-labelledby="search-heading">
+                <div class="section-heading compact-heading">
+                    <h3 id="search-heading">{{ t("radio_search") }}</h3>
+                </div>
+
+                {% if selected_device_id %}
+                <form action="/miniapp/dashboard" method="get" class="preset-search-form" data-preset-search-form>
+                    <label class="field search-field">
+                        <input type="text" name="preset_query" value="{{ preset_query }}" placeholder="{{ t('search_radio_stations') }}" autocomplete="off" data-preset-search-input>
+                    </label>
+                </form>
+
+                <div
+                    class="message error-message"
+                    role="alert"
+                    aria-live="polite"
+                    data-preset-search-error
+                    {% if not preset_search_error %}hidden{% endif %}>
+                    {{ preset_search_error }}
+                </div>
+                <div
+                    class="empty-state"
+                    data-preset-search-empty
+                    {% if not (preset_query and not preset_search_error and not preset_results) %}hidden{% endif %}>
+                    {{ t("no_stations_found") }}
+                </div>
+
+                <form id="station-drop-form" action="/miniapp/store-tunein-preset" method="post" hidden>
+                    <input type="hidden" name="preset_number" value="">
+                    <input type="hidden" name="station_id" value="">
+                    <input type="hidden" name="station_name" value="">
+                    <input type="hidden" name="image_url" value="">
+                </form>
+
+                <ul class="station-results" data-station-results {% if not preset_results %}hidden{% endif %}>
+                    {% for station in preset_results %}
+                    <li
+                        class="station-result {% if station.image_url %}has-art{% endif %}"
+                        data-station-id="{{ station.station_id }}"
+                        data-station-name="{{ station.name }}"
+                        data-station-image="{{ station.image_url }}">
+                        {% if station.image_url %}
+                        <img src="{{ station.image_url }}" alt="" draggable="false" data-optional-art>
+                        {% endif %}
+                        <form action="/miniapp/play-tunein-station" method="post" class="station-play-form">
+                            <input type="hidden" name="station_id" value="{{ station.station_id }}">
+                            <input type="hidden" name="station_name" value="{{ station.name }}">
+                            <input type="hidden" name="image_url" value="{{ station.image_url }}">
+                            <button type="submit" class="station-pick" aria-label="{{ t('play_station', station_name=station.name) }}">
+                                <span class="station-name">{{ station.name }}</span>
+                                {% if station.subtitle %}
+                                <span class="station-subtitle">{{ station.subtitle }}</span>
+                                {% endif %}
+                            </button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="empty-state">{{ t("select_online_device_first") }}</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="timer" data-panel-default-surface="dashboard" data-panel-name="{{ t('sleep_alarm') }}" aria-labelledby="timer-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('sleep_alarm')) }}"></button>
+            <div class="section-heading">
+                <h2 id="timer-heading">{{ t("sleep_alarm") }}</h2>
+            </div>
+            {% if selected_device_id %}
+            <div class="timer-grid">
+                {% set timer_labels = settings.timer_section_label %}
+                {% set sleep_section_label = timer_labels.get("sleep", t("sleep_section")) %}
+                {% set alarm_section_label = timer_labels.get("alarm", t("alarm_section")) %}
+                {% set jobs_section_label = timer_labels.get("jobs", t("scheduled_radio_actions")) %}
+                <h3 class="timer-section-title" data-timer-section-label="sleep" data-default-label="{{ t('sleep_section') }}" {% if not sleep_section_label %}hidden{% endif %}>{{ sleep_section_label }}</h3>
+                <form action="/miniapp/sleep" method="post" class="settings-form" data-sleep-form>
+                    <label class="field">
+                        <span>{{ t("sleep_in_minutes") }}</span>
+                        <input type="number" name="sleep_minutes" min="1" max="360" inputmode="numeric" placeholder="30" data-sleep-minutes>
+                    </label>
+                    <label class="field">
+                        <span>{{ t("or_sleep_at") }}</span>
+                        <input type="time" name="sleep_time" data-sleep-time>
+                    </label>
+                    <label class="field checkbox-field" data-repeat-control>
+                        <input type="checkbox" name="repeat_daily" value="1" data-repeat-daily>
+                        <span>{{ t("repeat_every_day") }}</span>
+                    </label>
+                    <label class="field checkbox-field" data-repeat-control>
+                        <input type="checkbox" name="repeat_weekly" value="1" data-repeat-weekly>
+                        <span>{{ t("repeat_weekly") }}</span>
+                    </label>
+                    <fieldset class="field weekday-picker" data-repeat-control data-repeat-weekly-days>
+                        <legend>{{ t("repeat_on_weekdays") }}</legend>
+                        <label><input type="checkbox" name="repeat_days" value="0" data-repeat-day><span>{{ t("weekday_monday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="1" data-repeat-day><span>{{ t("weekday_tuesday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="2" data-repeat-day><span>{{ t("weekday_wednesday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="3" data-repeat-day><span>{{ t("weekday_thursday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="4" data-repeat-day><span>{{ t("weekday_friday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="5" data-repeat-day><span>{{ t("weekday_saturday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="6" data-repeat-day><span>{{ t("weekday_sunday_short") }}</span></label>
+                    </fieldset>
+                    <p class="form-message" data-sleep-form-message hidden></p>
+                    <button type="submit" class="command-button primary">{{ t("set_sleep") }}</button>
+                </form>
+                <div class="job-pill legacy-inline-job-pill" data-legacy-job-kind="sleep" hidden>
+                    <span data-job-label>{% if sleep_job %}{{ sleep_job.label }} - {{ sleep_job.run_at }}{% if sleep_job.repeat_label %} · {{ sleep_job.repeat_label }}{% endif %}{% if sleep_job.status %} · {{ sleep_job.status }}{% endif %}{% endif %}</span>
+                    <div class="job-actions">
+                        <form action="/miniapp/sleep/toggle" method="post">
+                            <input type="hidden" name="paused" value="{% if sleep_job and sleep_job.paused %}false{% else %}true{% endif %}" data-job-paused-input>
+                            <button type="submit" class="compact-button" data-job-toggle-button>{% if sleep_job and sleep_job.paused %}{{ t("resume") }}{% else %}{{ t("pause") }}{% endif %}</button>
+                        </form>
+                        <form action="/miniapp/sleep/cancel" method="post">
+                            <button type="submit" class="compact-button">{{ t("remove") }}</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="timer-section-separator" aria-hidden="true"></div>
+                <h3 class="timer-section-title" data-timer-section-label="alarm" data-default-label="{{ t('alarm_section') }}" {% if not alarm_section_label %}hidden{% endif %}>{{ alarm_section_label }}</h3>
+
+                <form action="/miniapp/alarm" method="post" class="settings-form" data-alarm-form>
+                    <label class="field">
+                        <span>{{ t("alarm_time") }}</span>
+                        <input type="time" name="alarm_time">
+                    </label>
+                    <label class="field">
+                        <span>{{ t("preset") }}</span>
+                        <select name="alarm_preset_id">
+                            {% for slot in preset_slots %}
+                                {% if slot.preset %}
+                                <option value="{{ slot.preset.id }}">{{ slot.number }} - {{ slot.preset.name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="field checkbox-field" data-repeat-control>
+                        <input type="checkbox" name="repeat_daily" value="1" data-repeat-daily>
+                        <span>{{ t("repeat_every_day") }}</span>
+                    </label>
+                    <label class="field checkbox-field" data-repeat-control>
+                        <input type="checkbox" name="repeat_weekly" value="1" data-repeat-weekly>
+                        <span>{{ t("repeat_weekly") }}</span>
+                    </label>
+                    <fieldset class="field weekday-picker" data-repeat-control data-repeat-weekly-days>
+                        <legend>{{ t("repeat_on_weekdays") }}</legend>
+                        <label><input type="checkbox" name="repeat_days" value="0" data-repeat-day><span>{{ t("weekday_monday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="1" data-repeat-day><span>{{ t("weekday_tuesday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="2" data-repeat-day><span>{{ t("weekday_wednesday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="3" data-repeat-day><span>{{ t("weekday_thursday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="4" data-repeat-day><span>{{ t("weekday_friday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="5" data-repeat-day><span>{{ t("weekday_saturday_short") }}</span></label>
+                        <label><input type="checkbox" name="repeat_days" value="6" data-repeat-day><span>{{ t("weekday_sunday_short") }}</span></label>
+                    </fieldset>
+                    <div class="button-row">
+                        <p class="form-message" data-alarm-form-message hidden></p>
+                        <button type="submit" class="command-button primary">{{ t("set_alarm") }}</button>
+                    </div>
+                </form>
+                {% if alarm_job %}
+                <div class="job-pill legacy-inline-job-pill" data-legacy-job-kind="alarm" hidden>
+                    <span data-job-label>{{ alarm_job.label }} - {{ alarm_job.run_at }}{% if alarm_job.repeat_label %} · {{ alarm_job.repeat_label }}{% endif %}{% if alarm_job.status %} · {{ alarm_job.status }}{% endif %}</span>
+                    <div class="job-actions">
+                        <form action="/miniapp/alarm/toggle" method="post">
+                            <input type="hidden" name="paused" value="{% if alarm_job.paused %}false{% else %}true{% endif %}">
+                            <button type="submit" class="compact-button">{% if alarm_job.paused %}{{ t("resume") }}{% else %}{{ t("pause") }}{% endif %}</button>
+                        </form>
+                        <form action="/miniapp/alarm/cancel" method="post">
+                            <button type="submit" class="compact-button">{{ t("remove") }}</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="timer-job-list" aria-label="{{ t('scheduled_radio_actions') }}" data-job-list {% if not scheduled_jobs %}hidden{% endif %}>
+                    <div class="timer-section-separator" aria-hidden="true"></div>
+                    <h3 class="timer-section-title" data-timer-section-label="jobs" data-default-label="{{ t('scheduled_radio_actions') }}" {% if not jobs_section_label %}hidden{% endif %}>{{ jobs_section_label }}</h3>
+                    <div class="timer-job-scroll" data-job-list-items>
+                        {% for job in scheduled_jobs %}
+                        <div class="job-pill" data-job-id="{{ job.id }}" data-job-kind="{{ job.kind }}">
+                            <span data-job-label>{{ job.label }} - {{ job.run_at }}{% if job.repeat_label %} - {{ job.repeat_label }}{% endif %}{% if job.status %} - {{ job.status }}{% endif %}</span>
+                            <div class="job-actions">
+                                <form action="/miniapp/{{ job.kind }}/toggle" method="post" data-job-action-form>
+                                    <input type="hidden" name="job_id" value="{{ job.id }}">
+                                    <input type="hidden" name="paused" value="{% if job.paused %}false{% else %}true{% endif %}" data-job-paused-input>
+                                    <button type="submit" class="compact-button" data-job-toggle-button>{% if job.paused %}{{ t("resume") }}{% else %}{{ t("pause") }}{% endif %}</button>
+                                </form>
+                                <form action="/miniapp/{{ job.kind }}/cancel" method="post" data-job-action-form>
+                                    <input type="hidden" name="job_id" value="{{ job.id }}">
+                                    <button type="submit" class="compact-button">{{ t("remove") }}</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">{{ t("select_online_device_first") }}</div>
+            {% endif %}
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="custom-stream" data-panel-default-surface="dashboard" data-panel-name="{{ t('direct_stream') }}" aria-labelledby="custom-stream-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('direct_stream')) }}"></button>
+            <div class="section-heading">
+                <h2 id="custom-stream-heading">{{ t("direct_stream") }}</h2>
+            </div>
+            <p class="panel-hint">{{ t("direct_stream_untested_hint") }}</p>
+            {% if selected_device_id %}
+            <form action="/miniapp/custom-stream" method="post" class="settings-form">
+                <label class="field">
+                    <span>{{ t("slot") }}</span>
+                    <select name="preset_number">
+                        {% for number in preset_numbers %}
+                        <option value="{{ number }}">{{ number }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="field">
+                    <span>{{ t("name") }}</span>
+                    <input type="text" name="stream_name" autocomplete="off">
+                </label>
+                <label class="field">
+                    <span>{{ t("stream_url") }}</span>
+                    <input type="url" name="stream_url" inputmode="url" autocomplete="off">
+                </label>
+                <label class="field">
+                    <span>{{ t("image_url") }}</span>
+                    <input type="url" name="image_url" inputmode="url" autocomplete="off">
+                </label>
+                <button type="submit" class="command-button primary">{{ t("save_stream") }}</button>
+            </form>
+            {% else %}
+            <div class="empty-state">{{ t("select_online_device_first") }}</div>
+            {% endif %}
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="backup" data-panel-default-surface="dashboard" data-panel-name="{{ t('backup') }}" aria-labelledby="backup-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('backup')) }}"></button>
+            <div class="section-heading">
+                <h2 id="backup-heading">{{ t("backup") }}</h2>
+            </div>
+            <form action="/miniapp/backup" method="post" class="backup-form" data-backup-form>
+                <input type="hidden" name="panel_order" value="[]" data-panel-order-input>
+                <button type="submit" class="command-button primary">{{ t("save_backup") }}</button>
+            </form>
+            {% if backup_files %}
+            <form action="/miniapp/restore-backup-file" method="post" class="backup-select-form">
+                <label class="field">
+                    <span>{{ t("saved_backups") }}</span>
+                    <select name="backup_filename">
+                        {% for backup_file in backup_files %}
+                        <option value="{{ backup_file }}">{{ backup_file }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit" class="compact-button">{{ t("restore_selected") }}</button>
+            </form>
+            <ul class="backup-file-list" aria-label="{{ t('saved_backup_downloads') }}">
+                {% for backup_file in backup_files %}
+                <li>
+                    <span>{{ backup_file }}</span>
+                    <div class="backup-file-actions">
+                        <a class="compact-link" href="/miniapp/backup/{{ backup_file }}">{{ t("download") }}</a>
+                        <form
+                            action="/miniapp/backup/delete"
+                            method="post"
+                            class="inline-form"
+                            data-confirm-form
+                            data-confirm-message="{{ t('confirm_delete_backup', filename=backup_file) }}">
+                            <input type="hidden" name="backup_filename" value="{{ backup_file }}">
+                            <input type="hidden" name="return_to" value="{% if current_page == 'settings' %}/miniapp/settings{% else %}/miniapp/dashboard{% endif %}">
+                            <button type="submit" class="compact-button danger">{{ t("delete") }}</button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">{{ t("no_saved_backups") }}</div>
+            {% endif %}
+            <form action="/miniapp/restore" method="post" class="restore-form" data-restore-form>
+                <label class="field">
+                    <span>{{ t("restore_json") }}</span>
+                    <textarea name="backup_json" rows="5" data-restore-json></textarea>
+                </label>
+                <button type="submit" class="compact-button">{{ t("restore") }}</button>
+            </form>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="radios" data-panel-default-surface="dashboard" data-panel-name="{{ t('radios') }}" aria-labelledby="devices-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('radios')) }}"></button>
+            <div class="section-heading">
+                <h2 id="devices-heading">{{ t("radios") }}</h2>
+            </div>
+            {% if devices %}
+            <ul class="device-list">
+                {% for device in devices %}
+                <li class="device-card {{ device.status }}">
+                    <form action="/miniapp/select-device" method="post">
+                        <input type="hidden" name="device_id" value="{{ device.device_id }}">
+                        <input type="hidden" name="device_name" value="{{ device.name }}">
+                        <button type="submit"
+                            {% if device.status == 'offline' %} disabled aria-disabled="true" {% endif %}>
+                            <img src="/static/images/devices/{{ device.image_file }}" alt="" class="device-image">
+                            <span>
+                                <strong>{{ device.name }}</strong>
+                                <small>{{ device.product_code }} - {{ t(device.status) if device.status in ["online", "offline"] else device.status }}</small>
+                            </span>
+                        </button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">{{ t("no_devices_found") }}</div>
+            {% endif %}
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="settings-visual" data-panel-default-surface="settings" data-panel-name="{{ t('visual') }}" aria-labelledby="visual-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('visual')) }}"></button>
+            <div class="section-heading">
+                <h2 id="visual-heading">{{ t("visual") }}</h2>
+            </div>
+            <form action="/miniapp/settings/visual" method="post" class="settings-form visual-settings-form">
+                <label class="field color-field">
+                    <span>{{ t("panel_background") }}</span>
+                    <input type="color" name="background_color" value="{{ settings.global_panel_style.background_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("panel_text") }}</span>
+                    <input type="color" name="text_color" value="{{ settings.global_panel_style.text_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("panel_border") }}</span>
+                    <input type="color" name="border_color" value="{{ settings.global_panel_style.border_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("button_background") }}</span>
+                    <input type="color" name="button_background_color" value="{{ settings.global_panel_style.button_background_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("website_background") }}</span>
+                    <input type="color" name="page_background_color" value="{{ settings.site_style.page_background_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("input_background") }}</span>
+                    <input type="color" name="input_background_color" value="{{ settings.site_style.input_background_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("topbar_background") }}</span>
+                    <input type="color" name="topbar_background_color" value="{{ settings.site_style.topbar_background_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("topbar_text") }}</span>
+                    <input type="color" name="topbar_text_color" value="{{ settings.site_style.topbar_text_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("topbar_secondary_text") }}</span>
+                    <input type="color" name="topbar_muted_color" value="{{ settings.site_style.topbar_muted_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("topbar_accent") }}</span>
+                    <input type="color" name="topbar_accent_color" value="{{ settings.site_style.topbar_accent_color }}">
+                </label>
+                <label class="field color-field">
+                    <span>{{ t("topbar_border") }}</span>
+                    <input type="color" name="topbar_border_color" value="{{ settings.site_style.topbar_border_color }}">
+                </label>
+                <button type="submit" class="command-button primary">{{ t("apply_colors") }}</button>
+            </form>
+            <div class="button-row visual-quick-actions">
+                <form action="/miniapp/settings/visual/light" method="post" class="inline-form">
+                    <button type="submit" class="compact-button">{{ t("apply_light_theme") }}</button>
+                </form>
+                <form action="/miniapp/settings/visual/dark" method="post" class="inline-form">
+                    <button type="submit" class="compact-button">{{ t("apply_dark_theme") }}</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="settings-usability" data-panel-default-surface="settings" data-panel-name="{{ t('usability') }}" aria-labelledby="usability-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('usability')) }}"></button>
+            <div class="section-heading">
+                <h2 id="usability-heading">{{ t("usability") }}</h2>
+            </div>
+            <form action="/miniapp/settings/usability" method="post" class="settings-form">
+                <label class="field">
+                    <span>{{ t("topbar_hold_before_drag") }}</span>
+                    <input
+                        type="range"
+                        name="topbar_long_press_delay_ms"
+                        min="500"
+                        max="4000"
+                        step="100"
+                        value="{{ settings.topbar_long_press_delay_ms }}"
+                        data-ms-range>
+                    <small class="field-value" data-ms-range-value>{{ settings.topbar_long_press_delay_ms }} ms</small>
+                </label>
+                <label class="field">
+                    <span>{{ t("indicator_update_interval") }}</span>
+                    <input
+                        type="range"
+                        name="now_playing_poll_interval_ms"
+                        min="3000"
+                        max="60000"
+                        step="1000"
+                        value="{{ settings.now_playing_poll_interval_ms }}"
+                        data-ms-range>
+                    <small class="field-value" data-ms-range-value>{{ settings.now_playing_poll_interval_ms }} ms</small>
+                </label>
+                <label class="field">
+                    <span>{{ t("volume_update_interval") }}</span>
+                    <input
+                        type="range"
+                        name="volume_poll_interval_ms"
+                        min="3000"
+                        max="60000"
+                        step="1000"
+                        value="{{ settings.volume_poll_interval_ms }}"
+                        data-ms-range>
+                    <small class="field-value" data-ms-range-value>{{ settings.volume_poll_interval_ms }} ms</small>
+                </label>
+                <button type="submit" class="command-button primary">{{ t("save_usability") }}</button>
+            </form>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="settings-language" data-panel-default-surface="settings" data-panel-name="{{ t('language') }}" aria-labelledby="language-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('language')) }}"></button>
+            <div class="section-heading">
+                <h2 id="language-heading">{{ t("language") }}</h2>
+            </div>
+            <form action="/miniapp/settings/language" method="post" class="settings-form">
+                <label class="field">
+                    <span>{{ t("language") }}</span>
+                    <select name="language">
+                        {% for option in language_options %}
+                        <option value="{{ option.code }}" {% if settings.language == option.code %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit" class="command-button primary">{{ t("apply_language") }}</button>
+            </form>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="settings-account" data-panel-default-surface="settings" data-panel-name="{{ t('account') }}" aria-labelledby="account-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('account')) }}"></button>
+            <div class="section-heading">
+                <h2 id="account-heading">{{ t("account") }}</h2>
+            </div>
+            <form action="/miniapp/settings/account" method="post" class="settings-form">
+                <label class="field">
+                    <span>{{ t("name") }}</span>
+                    <input type="text" name="account_label" value="{{ account_label }}" autocomplete="off">
+                </label>
+                <button type="submit" class="command-button primary">{{ t("save_account") }}</button>
+            </form>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="settings-provider" data-panel-default-surface="settings" data-panel-name="{{ t('radio_search') }}" aria-labelledby="provider-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('radio_search')) }}"></button>
+            <div class="section-heading">
+                <h2 id="provider-heading">{{ t("radio_search") }}</h2>
+            </div>
+            <form action="/miniapp/settings/search" method="post" class="settings-form">
+                <label class="field">
+                    <span>{{ t("endpoint") }}</span>
+                    <input
+                        type="url"
+                        name="tunein_search_endpoint"
+                        value="{{ settings.tunein_search_endpoint }}"
+                        placeholder="{{ default_tunein_search_endpoint }}">
+                </label>
+                <button type="submit" class="command-button primary">{{ t("save_endpoint") }}</button>
+            </form>
+            <form action="/miniapp/settings/search/reset" method="post" class="inline-form">
+                <button type="submit" class="compact-button">{{ t("reset_default_values") }}</button>
+            </form>
+        </section>
+
+        <section class="dashboard-section reorder-panel" data-panel-id="settings-network" data-panel-default-surface="settings" data-panel-name="{{ t('radio_network') }}" aria-labelledby="network-heading">
+            <button type="button" class="panel-handle" data-panel-handle aria-label="{{ t('move_panel', panel=t('radio_network')) }}"></button>
+            <div class="section-heading">
+                <h2 id="network-heading">{{ t("radio_network") }}</h2>
+            </div>
+            <div class="network-setup-helper">
+                <strong>{{ t("wifi_setup_helper_title") }}</strong>
+                <p>{{ t("wifi_setup_helper_intro") }}</p>
+                <ol>
+                    <li>{{ t("wifi_setup_helper_step_unplug") }}</li>
+                    <li>{{ t("wifi_setup_helper_step_buttons") }}</li>
+                    <li>{{ t("wifi_setup_helper_step_phone") }}</li>
+                    <li>{{ t("wifi_setup_helper_step_browser") }}</li>
+                    <li>{{ t("wifi_setup_helper_step_finish") }}</li>
+                </ol>
+            </div>
+
+            {% if devices %}
+            <div class="settings-list">
+                {% for device in devices %}
+                <article class="settings-device">
+                    {% set connection_label = t(device.network_kind_key) if device.network_kind_key else (device.network_kind or t("unknown")) %}
+                    <div class="settings-device-heading">
+                        <div>
+                            <strong>{{ device.name }}</strong>
+                            <small>{{ device.product_code }} - {{ t(device.status) if device.status in ["online", "offline"] else device.status }}</small>
+                        </div>
+                        {% if device.ssid %}
+                        <span class="status-pill">{{ device.ssid }}</span>
+                        {% elif device.network_kind %}
+                        <span class="status-pill">{{ connection_label }}</span>
+                        {% endif %}
+                    </div>
+
+                    <dl class="network-summary">
+                        <div class="network-summary-item">
+                            <dt>{{ t("connection_type") }}</dt>
+                            <dd>{{ connection_label }}</dd>
+                        </div>
+                        <div class="network-summary-item">
+                            <dt>{{ t("current_ip") }}</dt>
+                            <dd>{{ device.current_ip or t("unknown") }}</dd>
+                        </div>
+                        <div class="network-summary-item">
+                            <dt>{{ t("wifi_ssid") }}</dt>
+                            <dd>{{ device.ssid or t("not_reported_by_radio") }}</dd>
+                        </div>
+                        {% if device.configured_ssid %}
+                        <div class="network-summary-item">
+                            <dt>{{ t("configured_wifi") }}</dt>
+                            <dd>{{ device.configured_ssid }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if device.wifi_profile_count %}
+                        <div class="network-summary-item">
+                            <dt>{{ t("wifi_profiles") }}</dt>
+                            <dd>{{ device.wifi_profile_count }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if device.network_interface %}
+                        <div class="network-summary-item">
+                            <dt>{{ t("interface") }}</dt>
+                            <dd>{{ device.network_interface }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if device.network_rssi %}
+                        <div class="network-summary-item">
+                            <dt>{{ t("signal_strength") }}</dt>
+                            <dd>{{ device.network_rssi }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if device.network_frequency %}
+                        <div class="network-summary-item">
+                            <dt>{{ t("frequency") }}</dt>
+                            <dd>{{ device.network_frequency }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if device.network_mac %}
+                        <div class="network-summary-item">
+                            <dt>{{ t("mac_address") }}</dt>
+                            <dd>{{ device.network_mac }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                    <p class="network-hint">{{ t("wifi_password_not_readable") }}</p>
+                    <p class="network-hint">{{ t("network_gateway_not_exposed") }}</p>
+
+                    {% if device.network_info_interfaces %}
+                    <div class="network-interface-list" aria-label="{{ t('radio_reported_interfaces') }}">
+                        <strong>{{ t("radio_reported_interfaces") }}</strong>
+                        {% for interface in device.network_info_interfaces %}
+                        <div class="network-interface-row">
+                            <div>
+                                <strong>{{ interface.name or t("interface") }}</strong>
+                                <small>{{ interface.type }}{% if interface.state %} - {{ interface.state }}{% endif %}</small>
+                            </div>
+                            <div>
+                                {% if interface.ip_address %}<span>{{ interface.ip_address }}</span>{% endif %}
+                                {% if interface.ssid %}<span>{{ interface.ssid }}</span>{% endif %}
+                                {% if interface.signal %}<span>{{ interface.signal }}</span>{% endif %}
+                                {% if interface.frequency %}<span>{{ interface.frequency }}</span>{% endif %}
+                                {% if interface.mac_address %}<span>{{ interface.mac_address }}</span>{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form action="/miniapp/settings/device" method="post" class="settings-form">
+                        <input type="hidden" name="device_id" value="{{ device.device_id }}">
+                        <label class="field">
+                            <span>{{ t("name") }}</span>
+                            <input type="text" name="device_name" value="{{ device.name }}" autocomplete="off">
+                        </label>
+                        <label class="field">
+                            <span>{{ t("stored_ip") }}</span>
+                            <input type="text" name="ip_address" value="{{ device.ip_address }}" inputmode="decimal" autocomplete="off">
+                        </label>
+                        <button type="submit" class="command-button primary">{{ t("save_radio") }}</button>
+                    </form>
+
+                    {% if device.status == "online" %}
+                    <form action="/miniapp/settings/wifi" method="post" class="settings-form wifi-form" data-wifi-profile-form>
+                        <input type="hidden" name="device_id" value="{{ device.device_id }}">
+                        <label class="field">
+                            <span>{{ t("wifi_ssid") }}</span>
+                            <input type="text" name="ssid" value="{{ device.configured_ssid or device.ssid }}" autocomplete="off">
+                        </label>
+                        <label class="field">
+                            <span>{{ t("password") }}</span>
+                            <input type="password" name="password" value="" autocomplete="new-password" data-password-input>
+                        </label>
+                        <label class="field checkbox-field password-visibility-toggle">
+                            <input type="checkbox" data-password-toggle>
+                            <span>{{ t("show_password") }}</span>
+                        </label>
+                        <label class="field">
+                            <span>{{ t("security") }}</span>
+                            <select name="security_type">
+                                <option value="wpa_or_wpa2" selected>WPA/WPA2</option>
+                                <option value="wpa2aes">WPA2 AES</option>
+                                <option value="wpa2tkip">WPA2 TKIP</option>
+                                <option value="wpaaes">WPA AES</option>
+                                <option value="wpatkip">WPA TKIP</option>
+                                <option value="wep">WEP</option>
+                                <option value="none">{{ t("none") }}</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="compact-button">{{ t("send_wifi_profile") }}</button>
+                    </form>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">{{ t("no_radios_found_account") }}</div>
+            {% endif %}
+        </section>

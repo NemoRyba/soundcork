@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoundCork</title>
+    <title>SoundCork {{ t("settings") }}</title>
     <link rel="stylesheet" href="/static/css/main.css?v=split-poll-setting-20260518">
     <script src="/static/js/miniapp.js?v=split-poll-setting-20260518" defer></script>
 </head>
 <body style="{{ theme_style }}">
     <a href="#main" class="skip-link">{{ t("skip_to_main") }}</a>
 
-    {% set current_page = page_id | default("dashboard") %}
-    {% set panel_stack = panel_stack | default("dashboard") %}
+    {% set current_page = "settings" %}
     <script type="application/json" id="miniapp-settings">{{ miniapp_settings | tojson }}</script>
     {% include "_topbar.html" %}
 
@@ -26,7 +25,7 @@
             {{ notice }}
         </div>
         {% endif %}
-        <div class="panel-stack" data-panel-stack="{{ panel_stack }}">
+        <div class="panel-stack" data-panel-stack="settings">
             {% include "_miniapp_panels.html" %}
         </div>
     </main>

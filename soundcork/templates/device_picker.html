@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t("choose_radio") }}</title>
+    <link rel="stylesheet" href="/static/css/main.css?v=split-poll-setting-20260518">
+</head>
+<body style="{{ theme_style }}">
+    <a href="#main" class="skip-link">{{ t("skip_to_main") }}</a>
+
+    <main id="main" class="login-container device-picker-page">
+        <div class="login-card device-picker-card">
+            <p class="eyebrow">{{ account_label }}</p>
+            <h1>{{ t("choose_radio") }}</h1>
+
+            {% if error %}
+            <div class="message error-message" role="alert" aria-live="polite">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            {% if devices %}
+            <ul class="device-list" aria-label="{{ t('available_radios') }}">
+                {% for device in devices %}
+                <li class="device-card {{ device.status }}">
+                    <form action="/miniapp/select-device" method="post">
+                        <input type="hidden" name="device_id" value="{{ device.device_id }}">
+                        <input type="hidden" name="device_name" value="{{ device.name }}">
+                        <button type="submit"
+                            {% if device.status == 'offline' %} disabled aria-disabled="true" {% endif %}>
+                            <img src="/static/images/devices/{{ device.image_file }}" alt="" class="device-image">
+                            <span>
+                                <strong>{{ device.name }}</strong>
+                                <small>{{ device.product_code }} - {{ t(device.status) if device.status in ["online", "offline"] else device.status }}</small>
+                            </span>
+                        </button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">{{ t("no_radios_found_account") }}</div>
+            {% endif %}
+
+            <form action="/miniapp/logout" method="post" class="device-picker-actions">
+                <button type="submit" class="compact-button">{{ t("back_to_accounts") }}</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

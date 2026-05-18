@@ -696,12 +696,22 @@ def bmx_tunein() -> Service:
     response_model_exclude_none=True,
     tags=["bmx"],
 )
+@app.get(
+    "/v1/playback/station/{station_id}",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
 def bmx_playback(station_id: str) -> BmxPlaybackResponse:
     return tunein_playback(station_id)
 
 
 @app.get(
     "/bmx/tunein/v1/playback/episodes/{episode_id}",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
+@app.get(
+    "/v1/playback/episodes/{episode_id}",
     response_model_exclude_none=True,
     tags=["bmx"],
 )
@@ -715,6 +725,11 @@ def bmx_podcast_info(episode_id: str, request: Request) -> BmxPodcastInfoRespons
     response_model_exclude_none=True,
     tags=["bmx"],
 )
+@app.get(
+    "/v1/playback/episode/{episode_id}",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
 def bmx_playback_podcast(episode_id: str, request: Request) -> BmxPlaybackResponse:
     return tunein_playback_podcast(episode_id)
 
@@ -725,12 +740,27 @@ def bmx_playback_podcast(episode_id: str, request: Request) -> BmxPlaybackRespon
     tags=["bmx"],
 )
 @app.get(
+    "/v1/navigate",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
+@app.get(
     "/bmx/tunein/v1/navigate/{encoded_uri}",
     response_model_exclude_none=True,
     tags=["bmx"],
 )
 @app.get(
+    "/v1/navigate/{encoded_uri}",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
+@app.get(
     "/bmx/tunein/v1/navigate/sub/{subsection}/{encoded_uri}",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
+@app.get(
+    "/v1/navigate/sub/{subsection}/{encoded_uri}",
     response_model_exclude_none=True,
     tags=["bmx"],
 )
@@ -746,6 +776,11 @@ def bmx_tunein_navigate(
     response_model_exclude_none=True,
     tags=["bmx"],
 )
+@app.get(
+    "/v1/navigate/profiles/{profile_type}/{program_id}/{encoded_uri}",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
 def bmx_tunein_navigate_profile(
     encoded_uri: str = "",
     profile_type: str | None = None,
@@ -757,6 +792,11 @@ def bmx_tunein_navigate_profile(
 
 @app.get(
     "/bmx/tunein/v1/search",
+    response_model_exclude_none=True,
+    tags=["bmx"],
+)
+@app.get(
+    "/v1/search",
     response_model_exclude_none=True,
     tags=["bmx"],
 )
@@ -776,6 +816,11 @@ def bmx_local_internet_radio() -> Service:
     return bmx_json_obj["bmx_services"][1]
 @app.post(
     "/bmx/tunein/v1/report",
+    status_code=HTTPStatus.OK,
+    tags=["bmx"],
+)
+@app.post(
+    "/v1/report",
     status_code=HTTPStatus.OK,
     tags=["bmx"],
 )

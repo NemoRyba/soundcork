@@ -3,7 +3,7 @@
 These tests mock out all filesystem interactions and focus on logic."""
 
 import xml.etree.ElementTree as ET
-from unittest.mock import MagicMock, call, mock_open
+from unittest.mock import MagicMock, mock_open
 
 import pytest
 from fastapi import HTTPException
@@ -14,10 +14,15 @@ from soundcork.constants import (
     DEVICE_INFO_FILE,
     DEVICES_DIR,
     POWERON_FILE,
+    PRESETS_FILE,
     RECENTS_FILE,
 )
 from soundcork.datastore import DataStore
 from soundcork.model import ConfiguredSource, DeviceInfo, Preset, Recent
+
+
+def norm(file_path: str) -> str:
+    return file_path.replace("\\", "/")
 
 
 @pytest.fixture
@@ -34,7 +39,7 @@ def sample_device() -> DeviceInfo:
         device_serial_number="8675309",
         product_serial_number="314519",
         firmware_version="1.2.3.4",
-        ip_address="192.168.1.1",
+        ip_address="192.0.2.1",
         name="Cloister Room",
         created_on=DEFAULT_DATESTR,
         updated_on=DEFAULT_DATESTR,
@@ -50,8 +55,8 @@ def test_poweron_devices_dir_calls_mkdir_when_missing_datastore_dir(
 
     result = datastore.poweron_devices_dir()
 
-    assert result == f"/virtual/data/{DEVICES_DIR}"
-    mkdir_mock.assert_called_once_with(f"/virtual/data/{DEVICES_DIR}")
+    assert norm(result) == f"/virtual/data/{DEVICES_DIR}"
+    assert norm(mkdir_mock.call_args.args[0]) == f"/virtual/data/{DEVICES_DIR}"
 
 
 def test_poweron_devices_dir_skips_mkdir_when_present(
@@ -63,7 +68,7 @@ def test_poweron_devices_dir_skips_mkdir_when_present(
 
     result = datastore.poweron_devices_dir()
 
-    assert result == f"/virtual/data/{DEVICES_DIR}"
+    assert norm(result) == f"/virtual/data/{DEVICES_DIR}"
     mkdir_mock.assert_not_called()
 
 
@@ -85,7 +90,7 @@ def test_account_device_dir(
 
     result = datastore.account_device_dir("12345", sample_device.device_id)
 
-    assert result == f"/virtual/data/12345/{DEVICES_DIR}/{sample_device.device_id}"
+    assert norm(result) == f"/virtual/data/12345/{DEVICES_DIR}/{sample_device.device_id}"
 
 
 def test_get_device_info(
@@ -168,11 +173,15 @@ def test_save_device_info_returns_object_and_writes_file(
     assert updated_device.device_id == sample_device.device_id
     assert updated_name == sample_device.name
     assert updated_ip == sample_device.ip_address
-    write_mock.assert_called_once_with(
-        f"/virtual/data/12345/{DEVICES_DIR}/{sample_device.device_id}/{DEVICE_INFO_FILE}",
-        xml_declaration=True,
-        encoding="UTF-8",
+    write_mock.assert_called_once()
+    assert (
+        norm(write_mock.call_args.args[0])
+        == f"/virtual/data/12345/{DEVICES_DIR}/{sample_device.device_id}/{DEVICE_INFO_FILE}"
     )
+    assert write_mock.call_args.kwargs == {
+        "xml_declaration": True,
+        "encoding": "UTF-8",
+    }
 
 
 def test_device_info_path_raises_when_missing_device_dir(
@@ -196,9 +205,9 @@ def test_create_account_calls_mkdir_if_account_dir_missing(
     created = datastore.create_account("12345", label="")
 
     assert created is True
-    assert mkdir_mock.call_args_list == [
-        call("/virtual/data/12345"),
-        call(f"/virtual/data/12345/{DEVICES_DIR}"),
+    assert [norm(args.args[0]) for args in mkdir_mock.call_args_list] == [
+        "/virtual/data/12345",
+        f"/virtual/data/12345/{DEVICES_DIR}",
     ]
 
 
@@ -241,8 +250,10 @@ def test_add_device_calls_mkdir_and_save_info_if_account_device_dir_present(
     added = datastore.add_device("12345", sample_device.device_id, sample_device)
 
     assert added is not None
-    mkdir_mock.assert_called_once_with(
-        f"/virtual/data/12345/{DEVICES_DIR}/{sample_device.device_id}"
+    mkdir_mock.assert_called_once()
+    assert (
+        norm(mkdir_mock.call_args.args[0])
+        == f"/virtual/data/12345/{DEVICES_DIR}/{sample_device.device_id}"
     )
     save_mock.assert_called_once_with(sample_device, "12345")
 
@@ -278,11 +289,15 @@ def test_remove_device_calls_remove_and_rmdir_if_account_device_dir_present(
     removed = datastore.remove_device("12345", sample_device.device_id)
 
     assert removed is True
-    remove_mock.assert_called_once_with(
-        f"/virtual/data/12345/devices/{sample_device.device_id}/DeviceInfo.xml"
+    remove_mock.assert_called_once()
+    assert (
+        norm(remove_mock.call_args.args[0])
+        == f"/virtual/data/12345/devices/{sample_device.device_id}/DeviceInfo.xml"
     )
-    rmdir_mock.assert_called_once_with(
-        f"/virtual/data/12345/devices/{sample_device.device_id}"
+    rmdir_mock.assert_called_once()
+    assert (
+        norm(rmdir_mock.call_args.args[0])
+        == f"/virtual/data/12345/devices/{sample_device.device_id}"
     )
 
 
@@ -292,8 +307,12 @@ def test_save_presets_constructs_xml(
     monkeypatch,
 ):
     write_mock = MagicMock()
+    replace_mock = MagicMock()
+    remove_mock = MagicMock()
     monkeypatch.setattr(ET.ElementTree, "write", write_mock)
     monkeypatch.setattr("soundcork.datastore.path.exists", lambda _: True)
+    monkeypatch.setattr("soundcork.datastore.replace", replace_mock)
+    monkeypatch.setattr("soundcork.datastore.remove", remove_mock)
 
     presets = [
         Preset(
@@ -327,6 +346,57 @@ def test_save_presets_constructs_xml(
     ids = [elem.attrib["id"] for elem in root.findall("preset")]
     assert ids == ["1", "2"]
     write_mock.assert_called_once()
+    temp_path = write_mock.call_args.args[0]
+    assert temp_path.replace("\\", "/").startswith(
+        f"/virtual/data/12345/{PRESETS_FILE}."
+    )
+    replace_mock.assert_called_once()
+    replaced_temp, replaced_target = replace_mock.call_args.args
+    assert replaced_temp == temp_path
+    assert replaced_target.replace("\\", "/") == f"/virtual/data/12345/{PRESETS_FILE}"
+
+
+def test_save_presets_replaces_shorter_xml_without_trailing_garbage(
+    tmp_path,
+    sample_device: DeviceInfo,
+    monkeypatch,
+):
+    monkeypatch.setattr("soundcork.datastore.settings.data_dir", str(tmp_path))
+    datastore = DataStore()
+    account_dir = tmp_path / "12345"
+    account_dir.mkdir()
+    preset_path = account_dir / PRESETS_FILE
+    preset_path.write_text(
+        "<?xml version='1.0' encoding='UTF-8'?><presets>"
+        "<preset id='1'><ContentItem source='TUNEIN' type='stationurl' "
+        "location='old' isPresetable='true'><itemName>Old</itemName>"
+        "<containerArt /></ContentItem></preset></presets>"
+        "<preset id='2'>trailing</preset></presets>",
+        encoding="utf-8",
+    )
+
+    datastore.save_presets(
+        "12345",
+        sample_device.device_id,
+        [
+            Preset(
+                id="1",
+                name="A",
+                source="TUNEIN",
+                type="stationurl",
+                location="/v1/playback/station/s1",
+                source_account="",
+                is_presetable="true",
+                created_on="",
+                updated_on="",
+                container_art="",
+            )
+        ],
+    )
+
+    loaded = ET.parse(preset_path).getroot()
+    assert [preset.attrib["id"] for preset in loaded.findall("preset")] == ["1"]
+    assert "trailing" not in preset_path.read_text(encoding="utf-8")
 
 
 def test_save_recents_constructs_xml(
@@ -373,11 +443,12 @@ def test_save_recents_constructs_xml(
     assert item_name.text == "A"
     assert container_art is not None
     assert container_art.text == "bloop"
-    write_mock.assert_called_once_with(
-        f"/virtual/data/12345/{RECENTS_FILE}",
-        xml_declaration=True,
-        encoding="UTF-8",
-    )
+    write_mock.assert_called_once()
+    assert norm(write_mock.call_args.args[0]) == f"/virtual/data/12345/{RECENTS_FILE}"
+    assert write_mock.call_args.kwargs == {
+        "xml_declaration": True,
+        "encoding": "UTF-8",
+    }
 
 
 def test_get_presets_parses_xml_from_mocked_parse(
@@ -559,9 +630,13 @@ def test_save_poweron_writes_xml_when_dir_exists(
     datastore.save_poweron(sample_device.device_id, "<updates />")
 
     mkdir_mock.assert_not_called()
-    open_mock.assert_called_once_with(
-        f"/virtual/data/devices/{sample_device.device_id}/{POWERON_FILE}", "w"
+    open_mock.assert_called_once()
+    assert (
+        norm(open_mock.call_args.args[0])
+        == f"/virtual/data/devices/{sample_device.device_id}/{POWERON_FILE}"
     )
+    assert open_mock.call_args.args[1] == "w"
+    assert open_mock.call_args.kwargs == {"encoding": "utf-8"}
 
 
 def test_save_poweron_creates_dir_when_missing_and_writes_xml(
@@ -577,21 +652,30 @@ def test_save_poweron_creates_dir_when_missing_and_writes_xml(
 
     datastore.save_poweron(sample_device.device_id, "<updates />")
 
-    open_mock.assert_called_once_with(
-        f"/virtual/data/devices/{sample_device.device_id}/{POWERON_FILE}", "w"
+    open_mock.assert_called_once()
+    assert (
+        norm(open_mock.call_args.args[0])
+        == f"/virtual/data/devices/{sample_device.device_id}/{POWERON_FILE}"
     )
+    assert open_mock.call_args.args[1] == "w"
+    assert open_mock.call_args.kwargs == {"encoding": "utf-8"}
 
 
 def test_save_xml_helpers_open_files_to_write(datastore: DataStore, monkeypatch):
     open_mock = mock_open()
+    replace_mock = MagicMock()
+    remove_mock = MagicMock()
     monkeypatch.setattr("builtins.open", open_mock)
     monkeypatch.setattr("soundcork.datastore.path.exists", lambda _: True)
+    monkeypatch.setattr("soundcork.datastore.replace", replace_mock)
+    monkeypatch.setattr("soundcork.datastore.remove", remove_mock)
 
     datastore.save_presets_xml("12345", "<presets />")
     datastore.save_recents_xml("12345", "<recents />")
     datastore.save_configured_sources_xml("12345", "<sources />")
 
     assert open_mock.call_count == 3
+    replace_mock.assert_called_once()
 
 
 def test_etag_for_account_correctly_finds_max(datastore: DataStore, monkeypatch):
@@ -599,7 +683,7 @@ def test_etag_for_account_correctly_finds_max(datastore: DataStore, monkeypatch)
     monkeypatch.setattr(
         "soundcork.datastore.path.getmtime",
         lambda f: {"Presets.xml": 1.0, "Recents.xml": 2.0, "Sources.xml": 3.0}[
-            f.split("/")[-1]
+            norm(f).split("/")[-1]
         ],
     )
 
@@ -618,7 +702,7 @@ def test_find_device_prefers_account_then_falls_back_poweron(
         device_serial_number="4",
         product_serial_number="5",
         firmware_version="6",
-        ip_address="10.0.0.2",
+        ip_address="192.0.2.2",
         name="",
         created_on="",
         updated_on="",

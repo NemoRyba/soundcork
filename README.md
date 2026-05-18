@@ -107,6 +107,63 @@ When you're done with the virtual environment, you can type `deactivate` to leav
 
 You can verify the server by checking the `/docs` endpoint at your URL.
 
+### Phone-friendly SoundTouch app in this fork
+
+This fork adds a phone-first control surface at `/miniapp` for day-to-day use
+after a speaker has been configured to use SoundCork. The original `/admin` UI is
+still the setup/repair surface; `/miniapp` is meant to be the thing you keep on a
+phone home screen.
+
+The miniapp currently adds:
+
+- Account and device selection that auto-selects the only radio on an account,
+  or shows a device-only picker when an account has multiple radios.
+- A live top bar with play/buffering/standby state, station art, station name,
+  track/program text, and mute state.
+- Separate configurable polling intervals for the live indicator and for
+  volume/mute state, so physical radio button changes can appear in the browser.
+- A mobile dashboard with reorderable panels. Panels can be moved between
+  Dashboard, Home, and Settings from the UI.
+- Server-side miniapp settings so panel order, panel placement, labels, colors,
+  language, polling, and other UI preferences follow you across phones.
+- English and German UI strings.
+- Light, dark, and custom visual themes, plus global and per-panel colors for
+  panel background, text, border, and button background.
+- Preset playback, drag-to-reorder preset slots, and automatic sync of the final
+  order back to the selected radio.
+- TuneIn-compatible radio search with delayed typeahead, scrollable results, tap
+  to play, and drag searched stations directly onto preset slots.
+- A sync popover for pulling preset order from the radio into SoundCork or
+  writing SoundCork's order back to the radio.
+- Custom direct stream URL saving for stations that are not found through the
+  provider search.
+- Server-side backup and restore for presets, preset layout, and miniapp layout
+  settings. Backups are saved under the configured data directory in `backups/`
+  and can be downloaded or deleted from the UI.
+- Basic source and Bluetooth controls when the speaker exposes those local API
+  actions. These are still marked experimental in the UI.
+- A sleep timer and simple alarm scheduler with one-shot and weekly repeat
+  entries. Scheduled entries are currently in-memory and are lost when the
+  SoundCork server restarts.
+- Radio network details, stored radio IP editing, password visibility for Wi-Fi
+  forms, and an in-app helper for SoundTouch Wi-Fi setup without the old Bose
+  app.
+- Repair behavior for a broken local preset XML cache: SoundCork can discard the
+  bad cache and resync presets from a reachable radio.
+- Convenience start scripts: `start_soundcork.sh` and `start_soundcork.ps1`.
+
+SoundTouch Wi-Fi setup note: on the tested SoundTouch 20, the radio refused
+`AddWirelessProfile` while Ethernet was plugged in with
+`ADD_PROFILE_ETHERNET_PLUGGED_IN`. The reliable app-free setup path was to
+unplug Ethernet, hold `Preset 2 + Volume -` until setup mode, join the temporary
+`Bose SoundTouch Wi-Fi Network`, then open `http://192.168.1.1` or, on some
+firmware, `http://192.0.2.1`.
+
+See [docs/miniapp.md](docs/miniapp.md) for the longer feature guide, Raspberry
+Pi notes, safety notes, and public fork checklist. Before publishing a fork, keep
+personal `data/`, `logs/`, generated backups, `.env.private`, and
+`MiniappSettings.json` out of git.
+
 ### Setting your SoundTouch device to use the soundcork server
 
 For purposes of this example, let's say that you've set up a soundcork server on your local server available via hostname ```soundcork.local.example.com``` and running on port 8000.  Let's also say that you want a data dir at ```/home/soundcork/db```.
@@ -146,9 +203,9 @@ Under "Action" there are three possible actions available:
 
 If the soundcork admin UI is not working for you, or if you just want a more hands-on experience, you can configure the speakers to run with soundcork directly.
 
-Once the speaker has had the usb with `remote_services` installed, you can connect to it via telnet. So if your SoundTouch device is on 192.168.1.158, you can do
+Once the speaker has had the usb with `remote_services` installed, you can connect to it via telnet. So if your SoundTouch device is reachable as `soundtouch.local`, you can do
 
-	telnet 192.168.1.158
+	telnet soundtouch.local
 	
 You'll get a login screen.  Log in as user ```root```; there is no password. 
 Once you're logged into the shell on the SoundTouch speaker, there are two things that need to be done. First, the speaker has a lot of information about its current configuration; this information will need to be sent to the soundcork server so that we can send it back to the speaker.  Second, the speaker will need to be configured to point to the soundcork server itself.
@@ -164,7 +221,7 @@ The general layout of the soundcork db (using /home/soundcork/db as the db locat
 		
 The first two things that we'll need to do is to get the speaker's device ID and account ID. Both of these are available via the webserver running on port 8090 of the SoundTouch device:
 
-	http://192.168.1.158:8090/info
+	http://{SoundTouchIp}:8090/info
 
 This should return something like
 

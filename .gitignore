@@ -1,6 +1,11 @@
 # Override config files
 private.py
 .env.private
+data/
+logs/
+backups/
+**/MiniappSettings.json
+**/soundcork-backup-*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

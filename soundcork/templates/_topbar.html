@@ -1,0 +1,98 @@
+{% set play_status = now_playing_state.play_status if now_playing_state else "" %}
+{% set play_status_upper = play_status | upper %}
+{% set raw_source = now_playing_state.source if now_playing_state and now_playing_state.source else "" %}
+{% set source_key = raw_source | lower | replace("_", " ") | trim %}
+{% set source_is_invalid = source_key in ["invalid source", "none", "unknown"] %}
+{% set has_media = now_playing_state and (now_playing_state.item_name or now_playing_state.station_name or now_playing_state.track or now_playing_state.artist or now_playing_state.album) %}
+{% set play_status_is_buffering = "BUFFER" in play_status_upper %}
+{% set play_status_is_stopped = "STOP" in play_status_upper or "PAUSE" in play_status_upper or "STANDBY" in play_status_upper or play_status_upper == "OFF" %}
+{% set play_status_is_playing = "PLAY" in play_status_upper or (has_media and not play_status_is_buffering and not play_status_is_stopped and not source_is_invalid) %}
+{% if now_playing_state and now_playing_state.item_name %}
+    {% set live_station = now_playing_state.item_name %}
+{% elif now_playing_state and now_playing_state.station_name %}
+    {% set live_station = now_playing_state.station_name %}
+{% elif selected_content_item %}
+    {% set live_station = selected_content_item %}
+{% elif source_is_invalid and selected_device %}
+    {% set live_station = t("radio_idle") %}
+{% elif selected_device %}
+    {% set live_station = t("no_station_selected") %}
+{% else %}
+    {% set live_station = t("no_radio_selected") %}
+{% endif %}
+{% set reported_station = now_playing_state.station_name if now_playing_state and now_playing_state.station_name else "" %}
+{% set live_station_key = live_station | lower | trim %}
+{% set reported_station_key = reported_station | lower | trim %}
+{% set track_key = now_playing_state.track | lower | trim if now_playing_state and now_playing_state.track else "" %}
+{% set artist_key = now_playing_state.artist | lower | trim if now_playing_state and now_playing_state.artist else "" %}
+{% set album_key = now_playing_state.album | lower | trim if now_playing_state and now_playing_state.album else "" %}
+{% if now_playing_state and now_playing_state.track and track_key != live_station_key and track_key != reported_station_key %}
+    {% set live_title = now_playing_state.track %}
+{% elif now_playing_state and now_playing_state.artist and artist_key != live_station_key and artist_key != reported_station_key %}
+    {% set live_title = now_playing_state.artist %}
+{% elif now_playing_state and now_playing_state.album and album_key != live_station_key and album_key != reported_station_key %}
+    {% set live_title = now_playing_state.album %}
+{% elif now_playing_state and now_playing_state.source and not source_is_invalid and source_key != live_station_key and source_key != reported_station_key %}
+    {% set live_title = raw_source %}
+{% elif source_is_invalid and selected_device %}
+    {% set live_title = t("select_preset_or_search") %}
+{% elif selected_device and has_media and not play_status_is_stopped %}
+    {% set live_title = t("playback_active") %}
+{% elif selected_device %}
+    {% set live_title = t("no_track_info") %}
+{% else %}
+    {% set live_title = t("no_radio_selected") %}
+{% endif %}
+{% set live_art = now_playing_state.art if now_playing_state and now_playing_state.art else "" %}
+{% set live_muted = volume_state and volume_state.muted %}
+{% set dashboard_label = selected_device if selected_device else t("dashboard") %}
+<header class="topbar">
+    <div class="topbar-inner">
+        <nav class="topnav" aria-label="{{ t('primary') }}" data-topnav>
+            <div class="topbar-row topbar-primary-row" data-topbar-row="primary">
+                <div class="topbar-item topbar-status-item" data-topbar-item="status">
+                    <a class="status-brand" href="/miniapp/dashboard" data-live-status aria-label="{{ t('current_playback_status') }}">
+                        <span class="live-dot {% if play_status_is_buffering %}is-buffering{% elif play_status_is_playing %}is-playing{% else %}is-stopped{% endif %}" data-live-dot></span>
+                        {% if live_art %}
+                        <img src="{{ live_art }}" alt="" class="live-art" data-live-art data-optional-art>
+                        {% endif %}
+                        <span class="live-muted" data-live-muted {% if not live_muted %}hidden{% endif %} aria-label="{{ t('muted') }}"></span>
+                        <span class="live-copy">
+                            <span class="live-station" data-live-station data-live-marquee title="{{ live_station }}">
+                                <span class="live-station-text" data-live-station-text>{{ live_station }}</span>
+                            </span>
+                            <span class="live-title" data-live-title title="{{ live_title }}">
+                                <span class="live-title-text" data-live-title-text>{{ live_title }}</span>
+                            </span>
+                        </span>
+                    </a>
+                </div>
+                <div class="topbar-item" data-topbar-item="settings">
+                    <a class="nav-link settings-nav-icon {% if current_page == 'settings' %}is-active{% endif %}" href="/miniapp/settings" data-panel-drop-target="settings" aria-label="{{ t('settings') }}">
+                        <span class="sr-only">{{ t("settings") }}</span>
+                    </a>
+                </div>
+                <div class="topbar-item" data-topbar-item="logout">
+                    <form action="/miniapp/logout" method="post">
+                        <button type="submit" class="icon-button logout-icon" aria-label="{{ t('logout') }}">
+                            <span class="sr-only">{{ t("logout") }}</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="topbar-row topbar-secondary-row" data-topbar-row="secondary">
+                <div class="topbar-item topbar-dashboard-item" data-topbar-item="dashboard">
+                    <a class="nav-link dashboard-nav-link {% if current_page == 'dashboard' %}is-active{% endif %}" href="/miniapp/dashboard" data-panel-drop-target="dashboard" aria-label="{{ dashboard_label }}">
+                        <span class="nav-link-label">{{ dashboard_label }}</span>
+                    </a>
+                </div>
+                <div class="topbar-item" data-topbar-item="home">
+                    <a class="nav-link home-nav-link {% if current_page == 'home' %}is-active{% endif %}" href="/miniapp/home" data-panel-drop-target="home" aria-label="{{ t('home') }}">
+                        <span class="home-nav-icon" aria-hidden="true"></span>
+                        <span class="sr-only">{{ t("home") }}</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </div>
+</header>

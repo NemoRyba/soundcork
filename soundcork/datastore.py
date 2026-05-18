@@ -4,7 +4,7 @@ import random
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from http import HTTPStatus
-from os import listdir, mkdir, path, remove, rmdir, walk
+from os import listdir, mkdir, path, remove, replace, rmdir, walk
 from random import randint
 from typing import Optional
 
@@ -97,7 +97,9 @@ class DataStore:
                 account: {"label": f"{DEFAULT_ACCOUNT_LABEL} {account}"}
                 for account in accounts
             }
-            with open(path.join(self.data_dir, ACCOUNTS_FILE), "w") as f:
+            with open(
+                path.join(self.data_dir, ACCOUNTS_FILE), "w", encoding="utf-8"
+            ) as f:
                 json.dump(accounts_labels, f)
 
     def get_account_info(self, account: str) -> str:
@@ -105,11 +107,17 @@ class DataStore:
 
         Likely to be the login email address used when Bose APIs were real"""
         try:
-            with open(path.join(self.data_dir, ACCOUNTS_FILE), "r") as f:
+            with open(
+                path.join(self.data_dir, ACCOUNTS_FILE), "r", encoding="utf-8"
+            ) as f:
                 accounts = json.load(f)
         except FileNotFoundError:
             # Initialize the file if it doesn't exist
             self.initialize_accounts_file()
+            with open(
+                path.join(self.data_dir, ACCOUNTS_FILE), "r", encoding="utf-8"
+            ) as f:
+                accounts = json.load(f)
         if account not in accounts:
             self.save_account_info(account, f"{DEFAULT_ACCOUNT_LABEL} {account}")
             return f"{DEFAULT_ACCOUNT_LABEL} {account}"
@@ -118,10 +126,10 @@ class DataStore:
 
     def save_account_info(self, account: str, label: str) -> None:
         """Saves the label for the given account"""
-        with open(path.join(self.data_dir, ACCOUNTS_FILE), "r") as f:
+        with open(path.join(self.data_dir, ACCOUNTS_FILE), "r", encoding="utf-8") as f:
             accounts = json.load(f)
-        if account_label := accounts.get(label):
-            if account_label == label:
+        if account_label := accounts.get(account):
+            if account_label.get("label") == label:
                 return
             logger.warning(
                 (
@@ -129,7 +137,7 @@ class DataStore:
                 )
             )
         accounts[account] = {"label": label}
-        with open(path.join(self.data_dir, ACCOUNTS_FILE), "w") as f:
+        with open(path.join(self.data_dir, ACCOUNTS_FILE), "w", encoding="utf-8") as f:
             json.dump(accounts, f, indent=4)
 
     def get_device_info(self, account: str, device: str) -> DeviceInfo:
@@ -180,6 +188,7 @@ class DataStore:
     def save_presets(self, account: str, device: str, presets_list: list[Preset]):
         """Saves Presets for a Device associated with an Account"""
         save_file = path.join(self.account_dir(account), PRESETS_FILE)
+        temp_file = f"{save_file}.{randint(100000, 999999)}.tmp"
         presets_elem = ET.Element("presets")
         presets_list.sort(key=lambda preset: int(preset.id))
         for preset in presets_list:
@@ -200,16 +209,32 @@ class DataStore:
 
         presets_tree = ET.ElementTree(presets_elem)
         ET.indent(presets_tree, space="    ", level=0)
-        presets_tree.write(save_file, xml_declaration=True, encoding="UTF-8")
+        try:
+            presets_tree.write(temp_file, xml_declaration=True, encoding="UTF-8")
+            replace(temp_file, save_file)
+        finally:
+            if path.exists(temp_file):
+                try:
+                    remove(temp_file)
+                except FileNotFoundError:
+                    pass
         return presets_elem
 
     # TODO: add error handling if you can't write the file
     def save_presets_xml(self, account: str, presets_xml: str):
         """Write Presets.xml for an Account"""
-        with open(
-            path.join(self.account_dir(account), PRESETS_FILE), "w"
-        ) as presets_file:
-            presets_file.write(presets_xml)
+        save_file = path.join(self.account_dir(account), PRESETS_FILE)
+        temp_file = f"{save_file}.{randint(100000, 999999)}.tmp"
+        try:
+            with open(temp_file, "w", encoding="utf-8") as presets_file:
+                presets_file.write(presets_xml)
+            replace(temp_file, save_file)
+        finally:
+            if path.exists(temp_file):
+                try:
+                    remove(temp_file)
+                except FileNotFoundError:
+                    pass
 
     def get_content_items(
         self, account: str, device_id: str
@@ -346,7 +371,9 @@ class DataStore:
     def save_recents_xml(self, account: str, recents_xml: str):
         """Write Recents.xml for an Account"""
         with open(
-            path.join(self.account_dir(account), RECENTS_FILE), "w"
+            path.join(self.account_dir(account), RECENTS_FILE),
+            "w",
+            encoding="utf-8",
         ) as recents_file:
             recents_file.write(recents_xml)
 
@@ -453,7 +480,9 @@ class DataStore:
     def save_configured_sources_xml(self, account: str, sources_xml: str):
         """Write Sources.xml for an Account"""
         with open(
-            path.join(self.account_dir(account), SOURCES_FILE), "w"
+            path.join(self.account_dir(account), SOURCES_FILE),
+            "w",
+            encoding="utf-8",
         ) as sources_file:
             sources_file.write(sources_xml)
 
@@ -499,6 +528,7 @@ class DataStore:
         with open(
             path.join(device_dir, POWERON_FILE),
             "w",
+            encoding="utf-8",
         ) as poweron_file:
             poweron_file.write(poweron_xml)
 

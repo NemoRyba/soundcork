@@ -172,6 +172,28 @@ kubectl apply -f ingress.yaml
 
 ## Option 4: Bare Metal
 
+### Raspberry Pi Installer
+
+On Raspberry Pi OS or another Debian-style host, the repository includes a
+one-command installer:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+It installs system packages, creates `.venv`, writes `soundcork/.env.private`,
+creates data/log directories, installs a `systemd` service, starts it, and checks
+the local HTTP endpoint. Common overrides:
+
+```bash
+BASE_URL=http://soundcork.local:8000 ./install.sh
+SOUNDCORK_PORT=8080 DATA_DIR=/home/pi/soundcork-data ./install.sh
+SKIP_SERVICE=1 ./install.sh
+```
+
+The script requires Python 3.12 or newer, matching `pyproject.toml`.
+
 ### Prerequisites
 
 - Python 3.12

@@ -148,6 +148,8 @@ always-on machine.
 
 Recommended setup:
 
+- Run `./install.sh` from the repository root to install dependencies, create
+  `.env.private`, and register a `systemd` service.
 - Give the Pi a stable IP address or reliable hostname.
 - Set `base_url` to the address the radio can reach, for example
   `http://soundcork.local:8000`.

@@ -107,6 +107,34 @@ When you're done with the virtual environment, you can type `deactivate` to leav
 
 You can verify the server by checking the `/docs` endpoint at your URL.
 
+### Raspberry Pi one-click installer
+
+For a Raspberry Pi or Debian-style machine, this fork includes `install.sh`.
+Run it from the repository root:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+The installer checks/install system packages, creates a Python 3.12 virtual
+environment, writes `soundcork/.env.private`, creates persistent data/log
+directories, installs a `systemd` service, starts SoundCork, and verifies the
+local HTTP endpoint. By default it uses `/var/lib/soundcork` for data and
+`/var/log/soundcork` for logs.
+
+Useful overrides:
+
+```bash
+BASE_URL=http://soundcork.local:8000 ./install.sh
+SOUNDCORK_PORT=8080 DATA_DIR=/home/pi/soundcork-data ./install.sh
+SKIP_SERVICE=1 ./install.sh
+```
+
+The project requires Python 3.12 or newer. If your Pi OS release does not offer
+`python3.12` packages, install Python 3.12 first and rerun with
+`PYTHON_BIN=/path/to/python3.12 ./install.sh`.
+
 ### Phone-friendly SoundTouch app in this fork
 
 This fork adds a phone-first control surface at `/miniapp` for day-to-day use
